@@ -137,3 +137,4 @@ dist
 
 # build files
 /backend/build
+.vscode
