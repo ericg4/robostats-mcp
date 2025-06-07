@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "bin": {
-    "weather": "./build/index.js"
+    "robostats": "./build/index.js"
   },
   "files": [
     "build"
