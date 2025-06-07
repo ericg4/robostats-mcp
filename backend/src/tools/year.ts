@@ -1,3 +1,55 @@
+export interface YearData {
+  year: number;
+  score_mean: number;
+  score_sd: number;
+  percentiles: {
+    total_points: {
+      p99: number;
+      p90: number;
+      p75: number;
+      p25: number;
+    };
+    [key: string]: {
+      p99: number;
+      p90: number;
+      p75: number;
+      p25: number;
+    };
+  };
+  breakdown: {
+    total_points_mean: number;
+    [key: string]: number;
+  };
+  metrics: {
+    win_prob: {
+      season: {
+        count: number;
+        conf: number;
+        acc: number;
+        mse: number;
+      };
+      champs: {
+        count: number;
+        conf: number;
+        acc: number;
+        mse: number;
+      };
+    };
+    score_pred: {
+      season: {
+        count: number;
+        rmse: number;
+        error: number;
+      };
+      champs: {
+        count: number;
+        rmse: number;
+        error: number;
+      };
+    };
+  };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function formatYearStats(yearData: any): string {
   if (!yearData || typeof yearData !== "object") return "No data available.";
@@ -70,6 +122,43 @@ export function formatYearStats(yearData: any): string {
     }
     lines.push("");
   }
+  
+  return lines.join("\n");
+}
+
+export function formatYearsList(years: YearData[]): string {
+  if (!years || years.length === 0) return "No years found.";
+  
+  const lines: string[] = [];
+  lines.push(`=== Found ${years.length} FRC Seasons ===`);
+  lines.push("");
+  
+  years.forEach(year => {
+    const avgScore = year.score_mean ? year.score_mean.toFixed(1) : 'N/A';
+    const scoreSD = year.score_sd ? year.score_sd.toFixed(1) : 'N/A';
+    
+    lines.push(`${year.year} | Average Score: ${avgScore} (±${scoreSD})`);
+    
+    if (year.breakdown) {
+      const phases = [];
+      if (year.breakdown.auto_points_mean) phases.push(`Auto: ${year.breakdown.auto_points_mean.toFixed(1)}`);
+      if (year.breakdown.teleop_points_mean) phases.push(`Teleop: ${year.breakdown.teleop_points_mean.toFixed(1)}`);
+      if (year.breakdown.endgame_points_mean) phases.push(`Endgame: ${year.breakdown.endgame_points_mean.toFixed(1)}`);
+      
+      if (phases.length > 0) {
+        lines.push(`   🎮 ${phases.join(" | ")}`);
+      }
+      
+      if (year.breakdown.rp_1_mean !== undefined || year.breakdown.rp_2_mean !== undefined) {
+        const rps = [];
+        if (year.breakdown.rp_1_mean !== undefined) rps.push(`RP1: ${(year.breakdown.rp_1_mean * 100).toFixed(0)}%`);
+        if (year.breakdown.rp_2_mean !== undefined) rps.push(`RP2: ${(year.breakdown.rp_2_mean * 100).toFixed(0)}%`);
+        lines.push(`   🏆 ${rps.join(" | ")}`);
+      }
+    }
+    
+    lines.push("");
+  });
   
   return lines.join("\n");
 }

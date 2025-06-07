@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { Team, formatTeam, formatTeamsList } from "./tools/team.js";
 import { makeStatboticsRequest } from "./utils/web-requests.js";
-import { formatYearStats } from "./tools/year.js";
+import { formatYearStats, formatYearsList, YearData } from "./tools/year.js";
 
 const STATBOTICS_API_BASE = "https://api.statbotics.io";
 const USER_AGENT = "statbotics-app/1.0";
@@ -99,6 +99,50 @@ server.tool(
         {
           type: "text",
           text: formatTeamsList(teamsData),
+        },
+      ],
+    };
+  },
+);
+
+// Register Statbotics years list tool
+server.tool(
+  "get-years",
+  "Get a list of FRC years with optional filters",
+  {
+    metric: z.enum([
+      "year", "score_mean", "score_sd", "count"
+    ]).optional().describe("How to sort the returned values"),
+    ascending: z.boolean().optional().describe("Whether to sort in ascending order (default: true)"),
+    limit: z.number().int().min(1).max(1000).optional().describe("Maximum number of years to return (default: 1000, max: 1000)"),
+    offset: z.number().int().min(0).optional().describe("Offset from the first result to return (default: 0)"),
+  },
+  async ({ metric, ascending, limit = 1000, offset = 0 }) => {
+    const params = new URLSearchParams();
+    if (metric) params.append("metric", metric);
+    if (ascending !== undefined) params.append("ascending", ascending.toString());
+    params.append("limit", limit.toString());
+    params.append("offset", offset.toString());
+
+    const url = `${STATBOTICS_API_BASE}/v3/years?${params.toString()}`;
+    const yearsData = await makeStatboticsRequest<YearData[]>(url, USER_AGENT);
+
+    if (!yearsData) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Failed to retrieve years data",
+          },
+        ],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: formatYearsList(yearsData),
         },
       ],
     };
