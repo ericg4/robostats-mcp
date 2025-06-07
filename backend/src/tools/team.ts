@@ -33,3 +33,24 @@ export function formatTeam(team: Team): string {
     `EPA (current/recent/mean/max): ${team.norm_epa.current.toFixed(2)}/${team.norm_epa.recent.toFixed(2)}/${team.norm_epa.mean.toFixed(2)}/${team.norm_epa.max.toFixed(2)}`,
   ].join("\n");
 }
+
+export function formatTeamsList(teams: Team[]): string {
+  if (!teams || teams.length === 0) return "No teams found.";
+  
+  const lines: string[] = [];
+  lines.push(`=== Found ${teams.length} Teams ===`);
+  lines.push("");
+  
+  teams.forEach(team => {
+    const location = [team.state, team.country].filter(Boolean).join(", ");
+    const epa = team.norm_epa.current.toFixed(1);
+    const record = `${team.record.wins}-${team.record.losses}-${team.record.ties}`;
+    
+    lines.push(`${team.team} | ${team.name}`);
+    lines.push(`   📍 ${location} ${team.district ? `(${team.district})` : ""}`);
+    lines.push(`   📊 EPA: ${epa} | Record: ${record} (${(team.record.winrate * 100).toFixed(0)}%) | Rookie: ${team.rookie_year}`);
+    lines.push("");
+  });
+  
+  return lines.join("\n");
+}
