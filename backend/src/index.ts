@@ -8,6 +8,7 @@ import { TeamYear, formatTeamYear, formatTeamYearsList } from "./tools/team-year
 import { Event, formatEvent, formatEventsList } from "./tools/event.js";
 import { TeamEvent, formatTeamEvent, formatTeamEventsList } from "./tools/team-event.js";
 import { Match, formatMatch, formatMatchesList } from "./tools/match.js";
+import { TeamMatch, formatTeamMatch, formatTeamMatchesList } from "./tools/team-match.js";
 
 const STATBOTICS_API_BASE = "https://api.statbotics.io";
 const USER_AGENT = "statbotics-app/1.0";
@@ -557,6 +558,99 @@ server.tool(
         {
           type: "text",
           text: formatMatchesList(matchesData),
+        },
+      ],
+    };
+  },
+);
+
+// Register Statbotics team match tool
+server.tool(
+  "get-team-match",
+  "Get Statbotics team performance data for a specific match",
+  {
+    team: z.number().int().describe("Team number (e.g. 254)"),
+    match: z.string().describe("Match key (e.g. 2024casd_f1m1, 2024ncwak_qm15, 2019casj_sf1m1)"),
+  },
+  async ({ team, match }) => {
+    const url = `${STATBOTICS_API_BASE}/v3/team_match/${team}/${match}`;
+    const teamMatchData = await makeStatboticsRequest<TeamMatch>(url, USER_AGENT);
+
+    if (!teamMatchData) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to retrieve data for team ${team} in match ${match}`,
+          },
+        ],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: formatTeamMatch(teamMatchData),
+        },
+      ],
+    };
+  },
+);
+
+// Register Statbotics team matches bulk query tool
+server.tool(
+  "get-team-matches",
+  "Query multiple team matches with optional filters",
+  {
+    team: z.number().int().min(0).optional().describe("Team number (no prefix), e.g. 5511"),
+    year: z.number().int().min(2002).max(2025).optional().describe("Four-digit year"),
+    event: z.string().optional().describe("Event key, e.g. 2019ncwak"),
+    week: z.number().int().min(0).max(8).optional().describe("Week of the competition season. 8 is CMP"),
+    match: z.string().optional().describe("Match key, e.g. 2019ncwak_f1m1"),
+    elim: z.boolean().optional().describe("Whether the match is an elimination match"),
+    metric: z.enum([
+      // Basic properties
+      "team", "match", "year", "event", "week", "alliance", "time", "status",
+      // Performance metrics  
+      "epa"
+    ]).optional().describe("How to sort the returned values. Any column in the table is valid"),
+    ascending: z.boolean().optional().describe("Whether to sort the returned values in ascending order. Default is ascending"),
+    limit: z.number().int().min(1).max(1000).optional().describe("Maximum number of team matches to return. Default is 50"),
+    offset: z.number().int().min(0).optional().describe("Offset from the first result to return"),
+  },
+  async ({ team, year, event, week, match, elim, metric, ascending, limit = 50, offset = 0 }) => {
+    const params = new URLSearchParams();
+    if (team !== undefined) params.append("team", team.toString());
+    if (year !== undefined) params.append("year", year.toString());
+    if (event) params.append("event", event);
+    if (week !== undefined) params.append("week", week.toString());
+    if (match) params.append("match", match);
+    if (elim !== undefined) params.append("elim", elim.toString());
+    if (metric) params.append("metric", metric);
+    if (ascending !== undefined) params.append("ascending", ascending.toString());
+    params.append("limit", limit.toString());
+    params.append("offset", offset.toString());
+
+    const url = `${STATBOTICS_API_BASE}/v3/team_matches?${params.toString()}`;
+    const teamMatchesData = await makeStatboticsRequest<TeamMatch[]>(url, USER_AGENT);
+
+    if (!teamMatchesData) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Failed to retrieve team matches data",
+          },
+        ],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: formatTeamMatchesList(teamMatchesData),
         },
       ],
     };
